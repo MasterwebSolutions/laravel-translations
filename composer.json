@@ -1,0 +1,47 @@
+{
+    "name": "masterweb/laravel-translations",
+    "description": "Self-contained translation management system for Laravel with AI translation, Translation Memory, and admin UI.",
+    "keywords": ["laravel", "translations", "i18n", "multilingual", "ai-translation", "translation-memory"],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "MasterWeb Solutions",
+            "email": "comercial@masterweb.solutions"
+        }
+    ],
+    "require": {
+        "php": "^8.1",
+        "illuminate/support": "^10.0|^11.0|^12.0",
+        "illuminate/database": "^10.0|^11.0|^12.0",
+        "illuminate/http": "^10.0|^11.0|^12.0",
+        "illuminate/routing": "^10.0|^11.0|^12.0",
+        "illuminate/cache": "^10.0|^11.0|^12.0",
+        "illuminate/console": "^10.0|^11.0|^12.0"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^8.0|^9.0|^10.0",
+        "phpunit/phpunit": "^10.0|^11.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Masterweb\\Translations\\": "src/"
+        },
+        "files": [
+            "src/helpers.php"
+        ]
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Masterweb\\Translations\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Masterweb\\Translations\\TranslationsServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
