@@ -16,8 +16,8 @@ class AiTranslator
     {
         $this->apiKey = config('translations.ai_api_key', '');
         $this->apiUrl = config('translations.ai_api_url', 'https://api.openai.com/v1/chat/completions');
-        $this->model = config('translations.ai_model', 'gpt-4o-mini');
-        $this->maxTokens = config('translations.ai_max_tokens', 2000);
+        $this->model = config('translations.ai_model', 'gpt-5-mini');
+        $this->maxTokens = (int) config('translations.ai_max_tokens', 4096);
     }
 
     /**
@@ -42,31 +42,30 @@ class AiTranslator
         $langNames = config('translations.language_meta', []);
         $langName = $langNames[$targetLang]['name'] ?? strtoupper($targetLang);
 
-        $systemPrompt = "You are a professional translator. Translate the given text to {$langName} ({$targetLang}). "
-            . "Rules:\n"
-            . "- Return ONLY the translated text, no explanations.\n"
-            . "- Preserve HTML tags, variables like :name or {name}, and markdown formatting.\n"
-            . "- Maintain the same tone and register.\n"
-            . "- Do not translate brand names or technical terms unless there's a standard translation.";
+        $systemPrompt = "You are a translation machine. You ONLY output the translated text. "
+            . "No explanations, no alternatives, no quotes, no context. Just the translation.";
+
+        $userPrompt = "Translate the following text to {$langName} ({$targetLang}). "
+            . "Output ONLY the translated text, nothing else.";
 
         if ($context) {
-            $systemPrompt .= "\n- Context: {$context}";
+            $userPrompt .= "\nContext: {$context}";
         }
 
+        $userPrompt .= "\n\n{$text}";
+
         try {
-            $response = Http::timeout(30)
+            $response = Http::timeout(60)
                 ->withHeaders([
                     'Authorization' => "Bearer {$this->apiKey}",
-                    'Content-Type' => 'application/json',
                 ])
                 ->post($this->apiUrl, [
                     'model' => $this->model,
                     'messages' => [
                         ['role' => 'system', 'content' => $systemPrompt],
-                        ['role' => 'user', 'content' => $text],
+                        ['role' => 'user', 'content' => $userPrompt],
                     ],
-                    'max_tokens' => $this->maxTokens,
-                    'temperature' => 0.3,
+                    'max_completion_tokens' => $this->maxTokens,
                 ]);
 
             if (!$response->successful()) {
@@ -111,7 +110,6 @@ class AiTranslator
             $response = Http::timeout(60)
                 ->withHeaders([
                     'Authorization' => "Bearer {$this->apiKey}",
-                    'Content-Type' => 'application/json',
                 ])
                 ->post($this->apiUrl, [
                     'model' => $this->model,
@@ -119,8 +117,8 @@ class AiTranslator
                         ['role' => 'system', 'content' => 'You are a translation quality reviewer. Respond only with valid JSON.'],
                         ['role' => 'user', 'content' => $prompt],
                     ],
-                    'max_tokens' => $this->maxTokens,
-                    'temperature' => 0.2,
+                    'max_completion_tokens' => $this->maxTokens,
+                    'response_format' => ['type' => 'json_object'],
                 ]);
 
             if (!$response->successful()) {

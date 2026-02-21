@@ -225,7 +225,7 @@ Features:
 ```env
 TRANSLATIONS_AI_KEY=sk-your-api-key-here
 TRANSLATIONS_AI_URL=https://api.openai.com/v1/chat/completions
-TRANSLATIONS_AI_MODEL=gpt-4o-mini
+TRANSLATIONS_AI_MODEL=gpt-5-mini
 ```
 
 3. Enable in config:

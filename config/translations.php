@@ -58,8 +58,8 @@ return [
     'ai_enabled' => false,
     'ai_api_key' => env('TRANSLATIONS_AI_KEY', ''),
     'ai_api_url' => env('TRANSLATIONS_AI_URL', 'https://api.openai.com/v1/chat/completions'),
-    'ai_model' => env('TRANSLATIONS_AI_MODEL', 'gpt-4o-mini'),
-    'ai_max_tokens' => 2000,
+    'ai_model' => env('TRANSLATIONS_AI_MODEL', 'gpt-5-mini'),
+    'ai_max_tokens' => 4096,
 
     /*
     |--------------------------------------------------------------------------
