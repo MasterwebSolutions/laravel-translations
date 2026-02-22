@@ -1,0 +1,123 @@
+{
+  "project_name": "laravel-translations",
+  "last_updated": "2026-02-22",
+  "critical_flows": {
+    "Translation_Retrieval": {
+      "description": "Cómo se obtiene una traducción cuando la app host usa t('group.key', 'fallback')",
+      "steps": [
+        "1. Blade template renderiza {{ t('nav.home', 'Home') }}",
+        "2. helpers.php::t() parsea 'nav.home' → group='nav', key='home'",
+        "3. SiteTranslation::getValue('nav', 'home', 'es', 'Home')",
+        "4. SiteTranslation::getAllForLang('es') → busca en Cache",
+        "5a. Cache HIT → retorna array[group][key]",
+        "5b. Cache MISS → query DB site_translations WHERE lang='es' → cachea resultado",
+        "6. Retorna valor encontrado o fallback 'Home'",
+        "7. Si hay excepción en cualquier paso → retorna fallback 'Home' (try/catch)"
+      ],
+      "performance": "O(1) después del primer request (todo cacheado por idioma)",
+      "failure_mode": "Graceful: siempre retorna el texto fallback"
+    },
+    "Package_Boot": {
+      "description": "Secuencia de arranque cuando Laravel carga el paquete",
+      "steps": [
+        "1. Composer autoload carga helpers.php (funciones t(), t_raw(), available_languages())",
+        "2. Laravel auto-discovers TranslationsServiceProvider via composer.json extra.laravel.providers",
+        "3. ServiceProvider::register() → mergeConfigFrom() + registra singletons",
+        "4. ServiceProvider::boot() → loadRoutesFrom() + loadViewsFrom() + loadMigrationsFrom()",
+        "5. Boot registra Blade::component('translations-menu-link')",
+        "6. Boot registra comandos artisan (si runningInConsole)"
+      ],
+      "failure_mode": "Si register() falla → paquete no funciona. Si boot() falla → rutas/vistas no cargan."
+    },
+    "Admin_Page_Load": {
+      "description": "Cómo se carga la página admin de traducciones",
+      "steps": [
+        "1. Browser GET /admin/translations",
+        "2. Middleware stack: web + auth (configurable)",
+        "3. TranslationController::index() ejecuta",
+        "4. Obtiene idiomas (TranslationManager::getLanguages()) → DB o config fallback",
+        "5. Query site_translations WHERE lang=source → sourceKeys",
+        "6. Query site_translations WHERE lang IN (otros) → otherTranslations",
+        "7. return view('translations::translations', compact(...))",
+        "8. Vista extiende layout configurado (standalone por defecto)",
+        "9. JS inline se ejecuta: obtiene CSRF token, configura fetch helpers",
+        "10. JS hace fetch a /coverage-stats para mostrar % de cobertura"
+      ]
+    },
+    "Template_Sync": {
+      "description": "Sincronización de t() calls desde Blade templates a la BD",
+      "steps": [
+        "1. Usuario hace click en 'Sync Templates' o llama TranslationManager::syncTexts()",
+        "2. scanTemplateTCalls() escanea directorios en config scan_paths",
+        "3. Regex busca t('grupo.key', 'fallback') en archivos .php",
+        "4. Para cada match, para cada idioma configurado:",
+        "5a. Si no existe en BD → SiteTranslation::create() con value=fallback (source) o '' (otros)",
+        "5b. Si existe pero vacío en source → update con fallback",
+        "6. Ejecuta custom_scanners (si hay configurados)",
+        "7. SiteTranslation::clearCache()",
+        "8. Retorna {created: N, updated: N}"
+      ]
+    },
+    "AI_Translation": {
+      "description": "Traducción automática con AI (OpenAI-compatible)",
+      "steps": [
+        "1. Admin hace click en 'AI' en una key o 'AI Translate All'",
+        "2. JS envía POST /ai-translate-key o POST /ai-translate-batch",
+        "3. Controller obtiene texto fuente de SiteTranslation",
+        "4. Para batch: primero consulta TranslationMemory::findExact()",
+        "5a. Memory HIT → usa traducción de memoria, incrementa usage_count",
+        "5b. Memory MISS → AiTranslator::translate(text, targetLang)",
+        "6. AiTranslator hace HTTP POST a OpenAI API con prompt de traducción",
+        "7. Guarda resultado en SiteTranslation::updateOrCreate()",
+        "8. Si memory_enabled: TranslationMemory::remember() para futuro reuso",
+        "9. Logea uso en ai_usage_logs",
+        "10. SiteTranslation::clearCache()"
+      ]
+    },
+    "Locale_Detection": {
+      "description": "Cómo SetLocale middleware detecta el idioma del usuario",
+      "steps": [
+        "1. Request llega con middleware SetLocale registrado",
+        "2. Obtiene lista de idiomas válidos (DB → config fallback)",
+        "3. Prioridad: URL prefix /{locale} > cookie 'lang' > default",
+        "4. Si locale válido en URL → App::setLocale() + guarda cookie",
+        "5. Si locale inválido en URL → redirect a /{defaultLang}",
+        "6. Si no hay locale en URL pero sí cookie → App::setLocale(cookie)",
+        "7. Continúa request con locale configurado"
+      ]
+    },
+    "Health_Check": {
+      "description": "Diagnóstico de integración del paquete",
+      "steps": [
+        "1. GET /admin/translations/health (sin auth)",
+        "2. Verifica existencia de 4 tablas en BD",
+        "3. Verifica config cargada",
+        "4. Verifica layout existe (view()->exists())",
+        "5. Verifica AI config",
+        "6. Verifica función t() disponible",
+        "7. Retorna JSON con status ok/issues_found + detalle de checks"
+      ]
+    }
+  },
+  "api_contracts": {
+    "Standard_JSON_Response": {
+      "success": true,
+      "description": "Todas las respuestas AJAX siguen este formato base"
+    },
+    "Translation_CRUD": {
+      "store": {"success": true},
+      "update": {"success": true},
+      "inline_update": {"success": true},
+      "sync": {"success": true, "created": 0, "updated": 0},
+      "coverage_stats": {"success": true, "stats": {}, "total_keys": 0}
+    },
+    "AI_Response": {
+      "translate_key": {"success": true, "translated": 0, "tokens_used": 0},
+      "translate_batch": {"success": true, "translated": 0, "from_memory": 0, "errors": 0, "tokens_used": 0}
+    },
+    "Language_Management": {
+      "add": {"success": true, "languages": []},
+      "remove": {"success": true, "languages": []}
+    }
+  }
+}

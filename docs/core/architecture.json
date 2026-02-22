@@ -1,0 +1,126 @@
+{
+  "project_name": "laravel-translations",
+  "version": "1.0.0",
+  "last_updated": "2026-02-22",
+  "type": "laravel-package",
+  "description": "Paquete Laravel autocontenido para gestión de traducciones con AI, Translation Memory y admin UI.",
+  "modules": {
+    "ServiceProvider": {
+      "responsibility": "Registro del paquete: config, rutas, vistas, migraciones, comandos, componentes Blade",
+      "files": ["src/TranslationsServiceProvider.php"],
+      "dependencies": ["config/translations.php", "routes/web.php"]
+    },
+    "Helpers": {
+      "responsibility": "Funciones globales t(), t_raw(), available_languages() cargadas via composer autoload",
+      "files": ["src/helpers.php"],
+      "dependencies": ["Models/SiteTranslation", "TranslationManager"],
+      "notes": "Se cargan MUY temprano via composer autoload.files. DEBEN tener try/catch para no romper la app host si las tablas no existen."
+    },
+    "TranslationManager": {
+      "responsibility": "Lógica central: idiomas, sync de templates, cobertura, escaneo de t() calls",
+      "files": ["src/TranslationManager.php"],
+      "dependencies": ["Models/SiteTranslation", "Models/TranslationSetting", "Contracts/TranslationScanner"]
+    },
+    "Controllers": {
+      "responsibility": "HTTP: CRUD traducciones, gestión idiomas, AI translate, stats",
+      "files": [
+        "src/Http/Controllers/TranslationController.php",
+        "src/Http/Controllers/TranslationMemoryController.php"
+      ],
+      "dependencies": ["TranslationManager", "Models/SiteTranslation", "Models/TranslationMemory", "Services/AiTranslator"]
+    },
+    "Models": {
+      "responsibility": "Eloquent models para las 3 tablas principales + cache",
+      "files": [
+        "src/Models/SiteTranslation.php",
+        "src/Models/TranslationMemory.php",
+        "src/Models/TranslationSetting.php"
+      ],
+      "tables": ["site_translations", "translation_memories", "translation_settings"],
+      "notes": "SiteTranslation cachea todo por idioma. TranslationSetting cachea todo en memoria estática."
+    },
+    "Services": {
+      "responsibility": "Integración con APIs externas (OpenAI para traducción)",
+      "files": ["src/Services/AiTranslator.php"],
+      "dependencies": ["config translations.ai_*"]
+    },
+    "Middleware": {
+      "responsibility": "Detección de idioma: URL prefix > cookie > default",
+      "files": ["src/Http/Middleware/SetLocale.php"],
+      "dependencies": ["TranslationManager"],
+      "notes": "Opcional. La app host decide si usarlo."
+    },
+    "Console": {
+      "responsibility": "Comandos artisan: install y memory-sync",
+      "files": [
+        "src/Console/InstallCommand.php",
+        "src/Console/MemorySyncCommand.php"
+      ],
+      "dependencies": ["TranslationManager", "Models/*"]
+    },
+    "Views": {
+      "responsibility": "Admin UI con Tailwind + JS inline",
+      "files": [
+        "resources/views/translations.blade.php",
+        "resources/views/translation-memory.blade.php",
+        "resources/views/layouts/standalone.blade.php",
+        "resources/views/components/menu-link.blade.php"
+      ],
+      "dependencies": ["Controllers (data)", "config translations.*"],
+      "notes": "JS es INLINE (no usa @push) para compatibilidad con cualquier layout. CSRF token se obtiene de meta tag O de {{ csrf_token() }} como fallback."
+    },
+    "BladeComponents": {
+      "responsibility": "Componente <x-translations-menu-link /> para integración en navegación del host",
+      "files": [
+        "src/View/Components/MenuLink.php",
+        "resources/views/components/menu-link.blade.php"
+      ],
+      "dependencies": ["config translations.route_name_prefix", "config translations.admin_prefix"]
+    },
+    "Routes": {
+      "responsibility": "Definición de todas las rutas admin con prefijo y nombres configurables",
+      "files": ["routes/web.php"],
+      "dependencies": ["Controllers/*", "config translations.admin_prefix", "config translations.admin_middleware", "config translations.route_name_prefix"]
+    },
+    "Config": {
+      "responsibility": "Configuración publicable del paquete",
+      "files": ["config/translations.php"],
+      "notes": "Es la INTERFAZ PRINCIPAL entre el paquete y la app host. Todo lo configurable está aquí."
+    },
+    "Migrations": {
+      "responsibility": "Creación de las 4 tablas del paquete",
+      "files": [
+        "database/migrations/2024_01_01_000001_create_site_translations_table.php",
+        "database/migrations/2024_01_01_000002_create_translation_memories_table.php",
+        "database/migrations/2024_01_01_000003_create_translation_settings_table.php",
+        "database/migrations/2024_01_01_000004_create_ai_usage_logs_table.php"
+      ],
+      "tables": ["site_translations", "translation_memories", "translation_settings", "ai_usage_logs"]
+    },
+    "Contracts": {
+      "responsibility": "Interface TranslationScanner para scanners custom de la app host",
+      "files": ["src/Contracts/TranslationScanner.php"],
+      "notes": "La app host implementa esta interface para extraer textos traducibles de sus propias tablas."
+    }
+  },
+  "database_tables": {
+    "site_translations": {
+      "columns": ["id", "group", "key", "lang", "value", "timestamps"],
+      "unique": ["group + key + lang"],
+      "purpose": "Almacena todas las traducciones"
+    },
+    "translation_memories": {
+      "columns": ["id", "source_lang", "target_lang", "source_text", "target_text", "source_hash", "context", "usage_count", "timestamps"],
+      "unique": ["source_hash + source_lang + target_lang"],
+      "purpose": "Memoria de traducción para reutilizar traducciones anteriores"
+    },
+    "translation_settings": {
+      "columns": ["key_name (PK)", "value"],
+      "purpose": "Settings key-value persistentes del paquete"
+    },
+    "ai_usage_logs": {
+      "columns": ["id", "action", "model", "prompt_tokens", "completion_tokens", "total_tokens", "items_count", "details", "timestamps"],
+      "purpose": "Log de uso de AI para control de costos"
+    }
+  }
+}

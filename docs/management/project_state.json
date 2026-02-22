@@ -1,0 +1,47 @@
+{
+  "project_name": "laravel-translations",
+  "version": "1.0.0",
+  "phase": "Beta",
+  "last_updated": "2026-02-22",
+  "stack": {
+    "type": "Laravel Package",
+    "php": "^8.1",
+    "laravel": "^10.0|^11.0|^12.0",
+    "frontend": "TailwindCSS (CDN in standalone), Vanilla JS (inline)",
+    "ai_integration": "OpenAI-compatible API (optional)",
+    "database": "Any Laravel-supported (MySQL, PostgreSQL, SQLite)"
+  },
+  "features_completed": [
+    "Database-driven translations with t() helper",
+    "Admin UI with inline editing",
+    "Multi-language management (add/remove dynamically)",
+    "Template scanning (auto-detect t() calls)",
+    "AI Translation via OpenAI API",
+    "Translation Memory (reuse previous translations)",
+    "Coverage stats per language",
+    "AI Quality check",
+    "Custom scanners interface",
+    "Locale detection middleware (URL/cookie)",
+    "Cache system with configurable TTL",
+    "Standalone layout (zero-config fallback)",
+    "Install command (guided setup)",
+    "Health check endpoint (integration diagnostics)",
+    "Menu Blade component (<x-translations-menu-link />)",
+    "Configurable route name prefix (avoid collisions)",
+    "Configurable content section name",
+    "Try/catch protection in all DB-accessing helpers",
+    "CSRF token fallback in inline JS"
+  ],
+  "known_issues": [
+    "No test suite yet (unit/feature tests needed)",
+    "No pagination on main translations table (only on memory page)",
+    "base/ directory contains generic templates that may confuse users",
+    "No export/import translations feature (CSV/JSON)",
+    "No batch delete on main translations page (only memory page)"
+  ],
+  "integration_requirements": {
+    "minimum": "composer require + php artisan migrate (works with standalone layout)",
+    "recommended": "php artisan translations:install (guided, validates everything)",
+    "for_custom_layout": "Layout must have: CSRF meta tag, @yield(section), TailwindCSS"
+  }
+}

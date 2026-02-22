@@ -16,6 +16,9 @@ A self-contained, database-driven translation management system for Laravel with
 - **Custom scanners** — Hook into your app's DB tables to extract translatable strings
 - **Locale detection** — Middleware detects language from URL prefix, cookie, or default
 - **Cache** — All translations cached (configurable TTL)
+- **Health check** — Diagnostic endpoint to verify integration
+- **Menu component** — Drop-in Blade component for navigation integration
+- **Standalone layout** — Works out of the box, no host layout required
 
 ## Requirements
 
@@ -24,9 +27,25 @@ A self-contained, database-driven translation management system for Laravel with
 
 ## Installation
 
-### 1. Install via Composer
+### Quick Install (recommended)
 
-**From GitHub (private repo):**
+```bash
+composer require masterweb/laravel-translations
+php artisan translations:install
+```
+
+The install command will:
+1. Publish the config file
+2. Run migrations
+3. Verify all tables exist
+4. Let you configure your layout (or use the built-in one)
+5. Show you the admin URL and next steps
+
+### Manual Install
+
+#### 1. Install via Composer
+
+**From GitHub:**
 
 Add the repository to your app's `composer.json`:
 
@@ -60,19 +79,26 @@ composer require masterweb/laravel-translations
 }
 ```
 
-### 2. Publish config
+#### 2. Publish config
 
 ```bash
 php artisan vendor:publish --tag=translations-config
 ```
 
-### 3. Run migrations
+#### 3. Run migrations
 
 ```bash
 php artisan migrate
 ```
 
-### 4. Configure
+#### 4. Verify installation
+
+```bash
+# Visit the health check endpoint:
+curl http://your-app.test/admin/translations/health
+```
+
+### Configuration
 
 Edit `config/translations.php`:
 
@@ -80,22 +106,56 @@ Edit `config/translations.php`:
 return [
     'source_language' => 'es',
     'available_languages' => ['es', 'en'],
-    
-    // Your admin layout (must have @yield('content') and @stack('scripts'))
-    'admin_layout' => 'layouts.admin',
-    
+
+    // Layout: use built-in standalone or your app's layout
+    // Built-in (works out of the box):
+    'admin_layout' => 'translations::layouts.standalone',
+    // Or use your app's layout:
+    // 'admin_layout' => 'layouts.admin',
+
+    // Section name - must match @yield() in your layout
+    'content_section' => 'content',
+
+    // Route name prefix (avoid collisions with your app's routes)
+    'route_name_prefix' => 'translations',
+
     // Admin route protection
     'admin_prefix' => 'admin/translations',
     'admin_middleware' => ['web', 'auth'],
-    
+
     // AI (optional)
-    'ai_enabled' => true,
+    'ai_enabled' => false,
     'ai_api_key' => env('TRANSLATIONS_AI_KEY'),
     'ai_model' => 'gpt-4o-mini',
 ];
 ```
 
-### 5. Add locale middleware (optional)
+### Using your own layout
+
+If you want the admin panel to render inside your app's existing layout:
+
+1. Set `admin_layout` to your layout name (e.g., `'layouts.admin'`)
+2. Set `content_section` to match your layout's `@yield()` name
+3. Your layout **must** have:
+   - `<meta name="csrf-token" content="{{ csrf_token() }}">` in `<head>`
+   - `@yield('content')` (or your section name) where content goes
+   - TailwindCSS loaded (the admin UI uses Tailwind classes)
+
+### Add to your navigation
+
+Drop the menu component into your sidebar or nav:
+
+```blade
+<x-translations-menu-link />
+```
+
+Customize the label:
+
+```blade
+<x-translations-menu-link label="Traducciones" />
+```
+
+### Add locale middleware (optional)
 
 In your `bootstrap/app.php` or route service provider:
 
@@ -123,6 +183,8 @@ Route::middleware([\Masterweb\Translations\Http\Middleware\SetLocale::class])
 {{-- Footer --}}
 <p>{{ t('footer.copyright', '© 2024 My Company') }}</p>
 ```
+
+> **Note:** The `t()` function is safe to use before migrations run — it will return the fallback text if the database table doesn't exist yet.
 
 ### Dot notation
 
@@ -225,7 +287,7 @@ Features:
 ```env
 TRANSLATIONS_AI_KEY=sk-your-api-key-here
 TRANSLATIONS_AI_URL=https://api.openai.com/v1/chat/completions
-TRANSLATIONS_AI_MODEL=gpt-5-mini
+TRANSLATIONS_AI_MODEL=gpt-4o-mini
 ```
 
 3. Enable in config:
@@ -234,12 +296,28 @@ TRANSLATIONS_AI_MODEL=gpt-5-mini
 'ai_enabled' => true,
 ```
 
+## Health Check
+
+Verify your installation is correct:
+
+```bash
+curl http://your-app.test/admin/translations/health
+```
+
+Returns JSON with status of all checks:
+- Database tables exist
+- Config is loaded
+- Layout exists
+- AI configuration
+- `t()` helper available
+
 ## API Reference
 
 All routes are prefixed with your configured `admin_prefix` (default: `admin/translations`).
 
 | Method | Route | Description |
 |--------|-------|-------------|
+| GET | `/health` | Integration health check |
 | GET | `/` | Translations admin page |
 | POST | `/` | Create translation key |
 | POST | `/sync` | Sync templates to DB |
@@ -251,6 +329,13 @@ All routes are prefixed with your configured `admin_prefix` (default: `admin/tra
 | GET | `/memory` | Translation Memory page |
 | POST | `/memory/import` | Import existing to memory |
 
+## Artisan Commands
+
+| Command | Description |
+|---------|-------------|
+| `translations:install` | Interactive installer |
+| `translations:memory-sync` | Sync translations to memory |
+
 ## Customizing Views
 
 ```bash
@@ -258,6 +343,23 @@ php artisan vendor:publish --tag=translations-views
 ```
 
 Views will be published to `resources/views/vendor/translations/`.
+
+## Troubleshooting
+
+### Error 500 on pages using `t()`
+The `t()` function is safe — it returns the fallback text if the DB isn't ready. If you still get 500s, check: `php artisan translations:install` or visit `/admin/translations/health`.
+
+### Buttons don't work in admin panel
+This usually means JavaScript isn't loading. The package includes inline scripts, but if you're using a custom layout, ensure it has `<meta name="csrf-token" content="{{ csrf_token() }}">` in the `<head>`.
+
+### Admin panel doesn't appear in my app's menu
+Add `<x-translations-menu-link />` to your navigation template. Or simply link to `route('translations.index')`.
+
+### Admin panel looks broken / no styles
+The admin UI uses TailwindCSS via CDN in the standalone layout. If using your own layout, ensure Tailwind is loaded.
+
+### Route name conflicts
+Change `route_name_prefix` in config to something unique (e.g., `'mw_translations'`).
 
 ## License
 

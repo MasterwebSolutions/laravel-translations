@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('translation_settings', function (Blueprint $table) {
             $table->string('key_name', 50)->primary();
-            $table->text('value');
+            $table->text('value')->nullable();
         });
     }
 

@@ -28,7 +28,9 @@ return [
     */
     'admin_prefix' => 'admin/translations',
     'admin_middleware' => ['web', 'auth'],
-    'admin_layout' => 'layouts.app',  // Your app's admin layout
+    'admin_layout' => 'translations::layouts.standalone',  // Change to your app's layout (e.g. 'layouts.app')
+    'content_section' => 'content',  // The @yield() section name in your layout
+    'route_name_prefix' => 'translations',  // Prefix for all route names (e.g. translations.index)
 
     /*
     |--------------------------------------------------------------------------
@@ -80,6 +82,14 @@ return [
     'scan_paths' => [
         resource_path('views'),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Health Check
+    |--------------------------------------------------------------------------
+    | Enable the /admin/translations/health endpoint for integration diagnostics.
+    */
+    'health_check' => true,
 
     /*
     |--------------------------------------------------------------------------

@@ -1,8 +1,8 @@
-@extends(config('translations.admin_layout', 'layouts.app'))
+@extends(config('translations.admin_layout', 'translations::layouts.standalone'))
 
 @section('title', 'Translation Memory')
 
-@section('content')
+@section(config('translations.content_section', 'content'))
 <div class="max-w-7xl mx-auto px-4 py-6">
     <div class="flex items-center justify-between mb-6">
         <div>
@@ -10,7 +10,7 @@
             <p class="text-sm text-gray-500 mt-1">Reuse previous translations to save AI tokens and maintain consistency.</p>
         </div>
         <div class="flex items-center gap-2">
-            <a href="{{ route('translations.index') }}" class="px-3 py-2 text-xs rounded-lg border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition">&larr; Translations</a>
+            <a href="{{ route(config('translations.route_name_prefix', 'translations') . '.index') }}" class="px-3 py-2 text-xs rounded-lg border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition">&larr; Translations</a>
             <button onclick="importExisting()" id="importBtn" class="px-3 py-2 text-xs rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition">Import Existing</button>
             <button onclick="purgeAll()" class="px-3 py-2 text-xs rounded-lg bg-red-600 text-white hover:bg-red-700 transition">Purge All</button>
         </div>
@@ -31,7 +31,7 @@
             <div class="flex flex-wrap gap-1 mt-1">
                 @foreach($stats['language_pairs'] as $pair)
                     <span class="inline-flex items-center px-2 py-0.5 rounded text-xs bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300">
-                        {{ strtoupper($pair['source_lang']) }} → {{ strtoupper($pair['target_lang']) }} ({{ $pair['cnt'] }})
+                        {{ strtoupper($pair['source_lang']) }} &rarr; {{ strtoupper($pair['target_lang']) }} ({{ $pair['cnt'] }})
                     </span>
                 @endforeach
             </div>
@@ -68,7 +68,7 @@
                         <td class="px-3 py-2 max-w-xs truncate" title="{{ $mem->source_text }}">{{ \Illuminate\Support\Str::limit($mem->source_text, 60) }}</td>
                         <td class="px-3 py-2 max-w-xs truncate" title="{{ $mem->target_text }}">{{ \Illuminate\Support\Str::limit($mem->target_text, 60) }}</td>
                         <td class="px-3 py-2 text-xs">
-                            <span class="font-mono">{{ strtoupper($mem->source_lang) }}→{{ strtoupper($mem->target_lang) }}</span>
+                            <span class="font-mono">{{ strtoupper($mem->source_lang) }}&rarr;{{ strtoupper($mem->target_lang) }}</span>
                         </td>
                         <td class="px-3 py-2 text-center">
                             <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs {{ $mem->usage_count > 1 ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500' }}">
@@ -101,7 +101,7 @@
     {{-- Memory Config --}}
     <div class="mt-6 bg-gray-50 dark:bg-gray-800 rounded-xl p-4">
         <h3 class="text-sm font-bold mb-3">Auto-Sync Settings</h3>
-        <div class="flex items-end gap-4">
+        <div class="flex items-end gap-4 flex-wrap">
             <div>
                 <label class="block text-xs text-gray-500 mb-1">Auto Sync</label>
                 <select id="autoSyncEnabled" class="px-3 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
@@ -119,94 +119,108 @@
     </div>
 </div>
 
-@push('scripts')
+{{-- Inline script: works regardless of whether the host layout has @stack('scripts') --}}
 <script>
-const CSRF = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-const BASE = '{{ rtrim(route("translations.memory.index"), "/") }}';
+(function() {
+    const CSRF = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+                 || '{{ csrf_token() }}';
+    const BASE = '{{ rtrim(route(config("translations.route_name_prefix", "translations") . ".memory.index"), "/") }}';
 
-function fj(url, opts = {}) {
-    return fetch(url, { headers: { 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json', ...opts.headers }, ...opts }).then(r => r.json());
-}
-
-function showToast(msg, ok = true) {
-    const d = document.createElement('div');
-    d.className = `fixed bottom-4 right-4 z-50 px-4 py-2 rounded-lg text-sm text-white ${ok ? 'bg-emerald-600' : 'bg-red-600'} shadow-lg`;
-    d.textContent = msg;
-    document.body.appendChild(d);
-    setTimeout(() => d.remove(), 3000);
-}
-
-async function importExisting() {
-    const btn = document.getElementById('importBtn');
-    btn.textContent = 'Importing...';
-    const res = await fj(`${BASE}/import`, { method: 'POST' });
-    btn.textContent = 'Import Existing';
-    if (res.success) { showToast(`Imported: ${res.imported}, Skipped: ${res.skipped}`); setTimeout(() => location.reload(), 1000); }
-    else showToast(res.error || 'Error', false);
-}
-
-async function purgeAll() {
-    if (!confirm('Delete ALL translation memories? This cannot be undone.')) return;
-    const res = await fj(`${BASE}/purge`, { method: 'POST' });
-    if (res.success) { showToast(`Purged ${res.deleted} memories`); setTimeout(() => location.reload(), 800); }
-}
-
-async function deleteMemory(id, btn) {
-    const res = await fj(`${BASE}/${id}`, { method: 'DELETE' });
-    if (res.success) { btn.closest('tr').remove(); showToast('Deleted'); }
-}
-
-function toggleSelectAll() {
-    const checked = document.getElementById('selectAll').checked;
-    document.querySelectorAll('.mem-check').forEach(c => c.checked = checked);
-    updateBulkBar();
-}
-
-document.addEventListener('change', (e) => { if (e.target.classList.contains('mem-check')) updateBulkBar(); });
-
-function updateBulkBar() {
-    const checked = document.querySelectorAll('.mem-check:checked');
-    const bar = document.getElementById('bulkBar');
-    if (checked.length > 0) {
-        bar.classList.remove('hidden');
-        document.getElementById('bulkCount').textContent = `${checked.length} selected`;
-    } else {
-        bar.classList.add('hidden');
+    function fj(url, opts = {}) {
+        return fetch(url, {
+            headers: { 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json', ...opts.headers },
+            ...opts
+        }).then(r => {
+            if (!r.ok) throw new Error(`HTTP ${r.status}`);
+            return r.json();
+        }).catch(err => {
+            console.error('[Translations Memory]', err);
+            return { success: false, error: err.message };
+        });
     }
-}
 
-async function bulkDeleteMemories() {
-    const ids = [...document.querySelectorAll('.mem-check:checked')].map(c => parseInt(c.value));
-    if (!ids.length) return;
-    const res = await fj(`${BASE}/bulk-delete`, { method: 'POST', body: JSON.stringify({ ids }), headers: { 'Content-Type': 'application/json' } });
-    if (res.success) { showToast(`Deleted ${ids.length} memories`); setTimeout(() => location.reload(), 800); }
-}
+    function showToast(msg, ok = true) {
+        const d = document.createElement('div');
+        d.className = `fixed bottom-4 right-4 z-50 px-4 py-2 rounded-lg text-sm text-white ${ok ? 'bg-emerald-600' : 'bg-red-600'} shadow-lg transition-opacity`;
+        d.textContent = msg;
+        document.body.appendChild(d);
+        setTimeout(() => { d.style.opacity = '0'; setTimeout(() => d.remove(), 300); }, 3000);
+    }
 
-function searchMemories() {
-    const q = document.getElementById('memorySearch').value.toLowerCase();
-    document.querySelectorAll('.memory-row').forEach(row => {
-        row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+    window.importExisting = async function() {
+        const btn = document.getElementById('importBtn');
+        btn.textContent = 'Importing...';
+        const res = await fj(`${BASE}/import`, { method: 'POST' });
+        btn.textContent = 'Import Existing';
+        if (res.success) { showToast(`Imported: ${res.imported}, Skipped: ${res.skipped}`); setTimeout(() => location.reload(), 1000); }
+        else showToast(res.error || 'Error', false);
+    };
+
+    window.purgeAll = async function() {
+        if (!confirm('Delete ALL translation memories? This cannot be undone.')) return;
+        const res = await fj(`${BASE}/purge`, { method: 'POST' });
+        if (res.success) { showToast(`Purged ${res.deleted} memories`); setTimeout(() => location.reload(), 800); }
+    };
+
+    window.deleteMemory = async function(id, btn) {
+        const res = await fj(`${BASE}/${id}`, { method: 'DELETE' });
+        if (res.success) { btn.closest('tr').remove(); showToast('Deleted'); }
+    };
+
+    window.toggleSelectAll = function() {
+        const checked = document.getElementById('selectAll').checked;
+        document.querySelectorAll('.mem-check').forEach(c => c.checked = checked);
+        updateBulkBar();
+    };
+
+    function updateBulkBar() {
+        const checked = document.querySelectorAll('.mem-check:checked');
+        const bar = document.getElementById('bulkBar');
+        if (checked.length > 0) {
+            bar.classList.remove('hidden');
+            document.getElementById('bulkCount').textContent = `${checked.length} selected`;
+        } else {
+            bar.classList.add('hidden');
+        }
+    }
+
+    document.addEventListener('change', (e) => { if (e.target.classList.contains('mem-check')) updateBulkBar(); });
+
+    window.bulkDeleteMemories = async function() {
+        const ids = [...document.querySelectorAll('.mem-check:checked')].map(c => parseInt(c.value));
+        if (!ids.length) return;
+        const res = await fj(`${BASE}/bulk-delete`, { method: 'POST', body: JSON.stringify({ ids }), headers: { 'Content-Type': 'application/json' } });
+        if (res.success) { showToast(`Deleted ${ids.length} memories`); setTimeout(() => location.reload(), 800); }
+    };
+
+    window.searchMemories = function() {
+        const q = document.getElementById('memorySearch').value.toLowerCase();
+        document.querySelectorAll('.memory-row').forEach(row => {
+            row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+        });
+    };
+
+    // Load config
+    fj(`${BASE}/config`).then(data => {
+        if (data.auto_sync_enabled !== undefined) {
+            document.getElementById('autoSyncEnabled').value = data.auto_sync_enabled ? '1' : '0';
+        }
+        if (data.sync_interval_hours) {
+            document.getElementById('syncInterval').value = data.sync_interval_hours;
+        }
     });
-}
 
-// Load config
-fetch(`${BASE}/config`, { headers: { 'Accept': 'application/json' } })
-    .then(r => r.json()).then(data => {
-        document.getElementById('autoSyncEnabled').value = data.auto_sync_enabled ? '1' : '0';
-        document.getElementById('syncInterval').value = data.sync_interval_hours || 24;
-    }).catch(() => {});
-
-async function saveConfig() {
-    const res = await fj(`${BASE}/config`, {
-        method: 'POST',
-        body: JSON.stringify({
-            auto_sync_enabled: document.getElementById('autoSyncEnabled').value === '1',
-            sync_interval_hours: parseInt(document.getElementById('syncInterval').value) || 24,
-        }),
-        headers: { 'Content-Type': 'application/json' },
-    });
-    showToast(res.success ? 'Config saved' : 'Error', res.success);
-}
+    window.saveConfig = async function() {
+        const res = await fj(`${BASE}/config`, {
+            method: 'POST',
+            body: JSON.stringify({
+                auto_sync_enabled: document.getElementById('autoSyncEnabled').value === '1',
+                sync_interval_hours: parseInt(document.getElementById('syncInterval').value) || 24,
+            }),
+            headers: { 'Content-Type': 'application/json' },
+        });
+        showToast(res.success ? 'Config saved' : 'Error', res.success);
+    };
+})();
 </script>
-@endpush
 @endsection

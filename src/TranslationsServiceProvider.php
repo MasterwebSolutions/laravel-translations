@@ -2,8 +2,11 @@
 
 namespace Masterweb\Translations;
 
+use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
+use Masterweb\Translations\Console\InstallCommand;
 use Masterweb\Translations\Console\MemorySyncCommand;
+use Masterweb\Translations\View\Components\MenuLink;
 
 class TranslationsServiceProvider extends ServiceProvider
 {
@@ -26,9 +29,13 @@ class TranslationsServiceProvider extends ServiceProvider
         // Load migrations
         $this->loadMigrationsFrom(__DIR__ . '/../database/migrations');
 
+        // Register Blade component: <x-translations-menu-link />
+        Blade::component('translations-menu-link', MenuLink::class);
+
         // Register artisan commands
         if ($this->app->runningInConsole()) {
             $this->commands([
+                InstallCommand::class,
                 MemorySyncCommand::class,
             ]);
 

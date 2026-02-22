@@ -1,0 +1,125 @@
+{
+  "project_name": "laravel-translations",
+  "format": "Mantener orden cronológico descendente (más reciente primero)",
+  "entries": [
+    {
+      "version": "1.0.0",
+      "date": "2026-02-22",
+      "type": "feature",
+      "author": "Cascade",
+      "changes": [
+        {
+          "category": "fix",
+          "description": "try/catch en t(), t_raw(), available_languages() para evitar 500 cuando tablas no existen",
+          "task_id": "T-005"
+        },
+        {
+          "category": "fix",
+          "description": "try/catch en SiteTranslation::getAllForLang() y clearCache()",
+          "task_id": "T-005"
+        },
+        {
+          "category": "feature",
+          "description": "Layout standalone con Tailwind CDN, nav propio y CSRF meta tag",
+          "task_id": "T-006"
+        },
+        {
+          "category": "fix",
+          "description": "JS movido de @push('scripts') a inline script en vistas para compatibilidad con cualquier layout",
+          "task_id": "T-007"
+        },
+        {
+          "category": "fix",
+          "description": "CSRF token fallback con {{ csrf_token() }} cuando meta tag no existe",
+          "task_id": "T-007"
+        },
+        {
+          "category": "fix",
+          "description": "Migración translation_settings.value ahora es nullable",
+          "task_id": "T-008"
+        },
+        {
+          "category": "feature",
+          "description": "Comando translations:install interactivo con validación de tablas y configuración de layout",
+          "task_id": "T-009"
+        },
+        {
+          "category": "feature",
+          "description": "Componente Blade <x-translations-menu-link /> para integración en navegación del host",
+          "task_id": "T-010"
+        },
+        {
+          "category": "feature",
+          "description": "Config key route_name_prefix para evitar colisión de nombres de ruta",
+          "task_id": "T-011"
+        },
+        {
+          "category": "feature",
+          "description": "Config key content_section para compatibilidad con layouts que usan @yield diferente",
+          "task_id": "T-011"
+        },
+        {
+          "category": "feature",
+          "description": "Health check endpoint GET /health con diagnóstico de tablas, config, layout, AI y función t()",
+          "task_id": "T-012"
+        },
+        {
+          "category": "docs",
+          "description": "README reescrito con Quick Install, troubleshooting, menu component, health check",
+          "task_id": "T-012"
+        },
+        {
+          "category": "docs",
+          "description": "Cerebro implementado: INDEX.md, architecture.json, dependencies.json, data_flow.json, decision_tree.md, verification_protocol.md, glossary.json, project_state.json, roadmap.json, changelog.json, common_errors.md, package_conventions.md, critical_rules.md, pre_commit_checklist.md",
+          "task_id": "T-013"
+        }
+      ],
+      "files_affected": [
+        "src/helpers.php",
+        "src/Models/SiteTranslation.php",
+        "src/TranslationsServiceProvider.php",
+        "config/translations.php",
+        "routes/web.php",
+        "resources/views/translations.blade.php",
+        "resources/views/translation-memory.blade.php",
+        "resources/views/layouts/standalone.blade.php (NEW)",
+        "resources/views/components/menu-link.blade.php (NEW)",
+        "src/Console/InstallCommand.php (NEW)",
+        "src/View/Components/MenuLink.php (NEW)",
+        "database/migrations/2024_01_01_000003_create_translation_settings_table.php",
+        "README.md",
+        "docs/* (NEW)"
+      ],
+      "breaking_changes": [
+        "Default admin_layout changed from 'layouts.app' to 'translations::layouts.standalone' — apps that relied on the default must set admin_layout explicitly",
+        "Route names now use configurable prefix — apps using route('translations.index') still work with default prefix"
+      ],
+      "migration_notes": "If upgrading from previous version: translation_settings.value is now nullable. Run ALTER TABLE translation_settings MODIFY value TEXT NULL if not re-running migrations."
+    },
+    {
+      "version": "0.9.0",
+      "date": "2026-02-01",
+      "type": "initial",
+      "author": "MasterWeb Solutions",
+      "changes": [
+        {
+          "category": "feature",
+          "description": "Initial release: translations CRUD, admin UI, AI translation, Translation Memory, locale middleware"
+        }
+      ],
+      "files_affected": ["ALL"],
+      "breaking_changes": [],
+      "migration_notes": "Initial install: run php artisan migrate"
+    }
+  ],
+  "categories": {
+    "feature": "Nueva funcionalidad",
+    "fix": "Corrección de bug",
+    "security": "Parche de seguridad",
+    "refactor": "Refactorización sin cambio de comportamiento",
+    "docs": "Cambios en documentación",
+    "test": "Nuevos tests o correcciones",
+    "setup": "Configuración inicial o de entorno",
+    "breaking": "Cambio que rompe compatibilidad"
+  }
+}

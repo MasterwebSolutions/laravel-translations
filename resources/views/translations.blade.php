@@ -1,12 +1,13 @@
-@extends(config('translations.admin_layout', 'layouts.app'))
+@extends(config('translations.admin_layout', 'translations::layouts.standalone'))
 
 @section('title', 'Translations')
 
-@section('content')
+@section(config('translations.content_section', 'content'))
 <div class="max-w-7xl mx-auto px-4 py-6">
     <div class="flex items-center justify-between mb-6">
         <h1 class="text-2xl font-bold">Translations</h1>
         <div class="flex items-center gap-2">
+            <a href="{{ route(config('translations.route_name_prefix', 'translations') . '.memory.index') }}" class="px-3 py-2 text-xs rounded-lg border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition">Translation Memory</a>
             <button onclick="syncTexts()" id="syncBtn" class="px-3 py-2 text-xs rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition">Sync Templates</button>
             @if(config('translations.ai_enabled'))
             <button onclick="translateAll()" id="translateAllBtn" class="px-3 py-2 text-xs rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition">AI Translate All</button>
@@ -108,7 +109,7 @@
     {{-- Add Key Form --}}
     <div class="mt-6 bg-gray-50 dark:bg-gray-800 rounded-xl p-4">
         <h3 class="text-sm font-bold mb-3">Add Translation Key</h3>
-        <form id="addKeyForm" class="flex items-end gap-3">
+        <form id="addKeyForm" class="flex items-end gap-3 flex-wrap">
             <div>
                 <label class="block text-xs text-gray-500 mb-1">Group</label>
                 <input name="group" type="text" placeholder="nav" required class="px-3 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white w-32">
@@ -126,111 +127,125 @@
     </div>
 </div>
 
-@push('scripts')
+{{-- Inline script: works regardless of whether the host layout has @stack('scripts') --}}
 <script>
-const CSRF = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-const BASE = '{{ rtrim(route("translations.index"), "/") }}';
+(function() {
+    const CSRF = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+                 || '{{ csrf_token() }}';
+    const BASE = '{{ rtrim(route(config("translations.route_name_prefix", "translations") . ".index"), "/") }}';
 
-function fj(url, opts = {}) {
-    return fetch(url, { headers: { 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json', ...opts.headers }, ...opts }).then(r => r.json());
-}
-
-function showToast(msg, ok = true) {
-    const d = document.createElement('div');
-    d.className = `fixed bottom-4 right-4 z-50 px-4 py-2 rounded-lg text-sm text-white ${ok ? 'bg-emerald-600' : 'bg-red-600'} shadow-lg`;
-    d.textContent = msg;
-    document.body.appendChild(d);
-    setTimeout(() => d.remove(), 3000);
-}
-
-async function saveInline(el) {
-    const id = el.dataset.id;
-    const original = el.dataset.original;
-    const newVal = el.textContent.trim();
-    if (newVal === original || newVal === '(empty)') return;
-    const res = await fj(`${BASE}/${id}/inline-update`, { method: 'POST', body: JSON.stringify({ value: newVal }), headers: { 'Content-Type': 'application/json' } });
-    if (res.success) { el.dataset.original = newVal; el.classList.remove('text-red-400', 'italic'); showToast('Saved'); }
-    else showToast(res.error || 'Error', false);
-}
-
-async function syncTexts() {
-    document.getElementById('syncBtn').textContent = 'Syncing...';
-    const res = await fj(`${BASE}/sync`, { method: 'POST' });
-    document.getElementById('syncBtn').textContent = 'Sync Templates';
-    if (res.success) { showToast(`Synced: ${res.created} created, ${res.updated} updated`); setTimeout(() => location.reload(), 1000); }
-    else showToast(res.error || 'Error', false);
-}
-
-async function aiTranslateKey(group, key) {
-    const res = await fj(`${BASE}/ai-translate-key`, { method: 'POST', body: JSON.stringify({ group, key }), headers: { 'Content-Type': 'application/json' } });
-    if (res.success) { showToast(`Translated to ${res.translated} languages`); setTimeout(() => location.reload(), 1000); }
-    else showToast(res.error || 'Error', false);
-}
-
-async function translateAll() {
-    if (!confirm('Translate ALL missing texts with AI? This may use tokens.')) return;
-    document.getElementById('translateAllBtn').textContent = 'Translating...';
-    const rows = document.querySelectorAll('.trans-row');
-    const keys = [...rows].map(r => ({ group: r.dataset.group, key: r.dataset.key }));
-    const BATCH = 5;
-    let total = 0, mem = 0, errs = 0;
-    for (let i = 0; i < keys.length; i += BATCH) {
-        const batch = keys.slice(i, i + BATCH);
-        const res = await fj(`${BASE}/ai-translate-batch`, { method: 'POST', body: JSON.stringify({ keys: batch }), headers: { 'Content-Type': 'application/json' } });
-        if (res.success) { total += res.translated; mem += res.from_memory || 0; errs += res.errors; }
+    function fj(url, opts = {}) {
+        return fetch(url, {
+            headers: { 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json', ...opts.headers },
+            ...opts
+        }).then(r => {
+            if (!r.ok) throw new Error(`HTTP ${r.status}`);
+            return r.json();
+        }).catch(err => {
+            console.error('[Translations]', err);
+            return { success: false, error: err.message };
+        });
     }
-    document.getElementById('translateAllBtn').textContent = 'AI Translate All';
-    showToast(`Done: ${total} translated, ${mem} from memory, ${errs} errors`);
-    if (total > 0) setTimeout(() => location.reload(), 1500);
-}
 
-function addLang() {
-    const input = document.getElementById('newLangInput');
-    const lang = input.value.trim().toLowerCase();
-    if (!lang) return;
-    fj(`${BASE}/add-language`, { method: 'POST', body: JSON.stringify({ lang }), headers: { 'Content-Type': 'application/json' } })
-        .then(r => { if (r.success) location.reload(); else showToast(r.error, false); });
-}
+    function showToast(msg, ok = true) {
+        const d = document.createElement('div');
+        d.className = `fixed bottom-4 right-4 z-50 px-4 py-2 rounded-lg text-sm text-white ${ok ? 'bg-emerald-600' : 'bg-red-600'} shadow-lg transition-opacity`;
+        d.textContent = msg;
+        document.body.appendChild(d);
+        setTimeout(() => { d.style.opacity = '0'; setTimeout(() => d.remove(), 300); }, 3000);
+    }
 
-function removeLang(lang) {
-    if (!confirm(`Remove language "${lang}" and ALL its translations?`)) return;
-    fj(`${BASE}/remove-language`, { method: 'POST', body: JSON.stringify({ lang }), headers: { 'Content-Type': 'application/json' } })
-        .then(r => { if (r.success) location.reload(); else showToast(r.error, false); });
-}
+    window.saveInline = async function(el) {
+        const id = el.dataset.id;
+        const original = el.dataset.original;
+        const newVal = el.textContent.trim();
+        if (newVal === original || newVal === '(empty)') return;
+        const res = await fj(`${BASE}/${id}/inline-update`, { method: 'POST', body: JSON.stringify({ value: newVal }), headers: { 'Content-Type': 'application/json' } });
+        if (res.success) { el.dataset.original = newVal; el.classList.remove('text-red-400', 'italic'); showToast('Saved'); }
+        else showToast(res.error || 'Error saving', false);
+    };
 
-function filterByGroup() {
-    const group = document.getElementById('groupFilter').value;
-    window.location.href = `${BASE}${group ? '?group=' + group : ''}`;
-}
+    window.syncTexts = async function() {
+        document.getElementById('syncBtn').textContent = 'Syncing...';
+        const res = await fj(`${BASE}/sync`, { method: 'POST' });
+        document.getElementById('syncBtn').textContent = 'Sync Templates';
+        if (res.success) { showToast(`Synced: ${res.created} created, ${res.updated} updated`); setTimeout(() => location.reload(), 1000); }
+        else showToast(res.error || 'Sync failed', false);
+    };
 
-function filterTable() {
-    const q = document.getElementById('searchInput').value.toLowerCase();
-    document.querySelectorAll('.trans-row').forEach(row => {
-        const text = row.textContent.toLowerCase();
-        row.style.display = text.includes(q) ? '' : 'none';
-    });
-}
+    window.aiTranslateKey = async function(group, key) {
+        const res = await fj(`${BASE}/ai-translate-key`, { method: 'POST', body: JSON.stringify({ group, key }), headers: { 'Content-Type': 'application/json' } });
+        if (res.success) { showToast(`Translated to ${res.translated} languages`); setTimeout(() => location.reload(), 1000); }
+        else showToast(res.error || 'Translation failed', false);
+    };
 
-// Coverage stats on load
-fetch(`${BASE}/coverage-stats`, { headers: { 'Accept': 'application/json' } })
-    .then(r => r.json()).then(data => {
+    window.translateAll = async function() {
+        if (!confirm('Translate ALL missing texts with AI? This may use tokens.')) return;
+        const btn = document.getElementById('translateAllBtn');
+        if (btn) btn.textContent = 'Translating...';
+        const rows = document.querySelectorAll('.trans-row');
+        const keys = [...rows].map(r => ({ group: r.dataset.group, key: r.dataset.key }));
+        const BATCH = 5;
+        let total = 0, mem = 0, errs = 0;
+        for (let i = 0; i < keys.length; i += BATCH) {
+            const batch = keys.slice(i, i + BATCH);
+            const res = await fj(`${BASE}/ai-translate-batch`, { method: 'POST', body: JSON.stringify({ keys: batch }), headers: { 'Content-Type': 'application/json' } });
+            if (res.success) { total += res.translated; mem += res.from_memory || 0; errs += res.errors; }
+        }
+        if (btn) btn.textContent = 'AI Translate All';
+        showToast(`Done: ${total} translated, ${mem} from memory, ${errs} errors`);
+        if (total > 0) setTimeout(() => location.reload(), 1500);
+    };
+
+    window.addLang = function() {
+        const input = document.getElementById('newLangInput');
+        const lang = input.value.trim().toLowerCase();
+        if (!lang) return;
+        fj(`${BASE}/add-language`, { method: 'POST', body: JSON.stringify({ lang }), headers: { 'Content-Type': 'application/json' } })
+            .then(r => { if (r.success) location.reload(); else showToast(r.error || 'Error', false); });
+    };
+
+    window.removeLang = function(lang) {
+        if (!confirm(`Remove language "${lang}" and ALL its translations?`)) return;
+        fj(`${BASE}/remove-language`, { method: 'POST', body: JSON.stringify({ lang }), headers: { 'Content-Type': 'application/json' } })
+            .then(r => { if (r.success) location.reload(); else showToast(r.error || 'Error', false); });
+    };
+
+    window.filterByGroup = function() {
+        const group = document.getElementById('groupFilter').value;
+        window.location.href = `${BASE}${group ? '?group=' + group : ''}`;
+    };
+
+    window.filterTable = function() {
+        const q = document.getElementById('searchInput').value.toLowerCase();
+        document.querySelectorAll('.trans-row').forEach(row => {
+            row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+        });
+    };
+
+    // Coverage stats on load
+    fj(`${BASE}/coverage-stats`).then(data => {
         if (!data.success) return;
         const bar = document.getElementById('coverageBar');
+        if (!bar) return;
         Object.entries(data.stats).forEach(([lang, s]) => {
-            const color = s.percent >= 90 ? 'emerald' : s.percent >= 50 ? 'amber' : 'red';
-            bar.innerHTML += `<div class="text-xs"><span class="font-bold">${lang.toUpperCase()}</span> <span class="text-${color}-600">${s.percent}%</span> (${s.count}/${s.total})</div>`;
+            const el = document.createElement('div');
+            el.className = 'text-xs';
+            const color = s.percent >= 90 ? '#059669' : s.percent >= 50 ? '#d97706' : '#dc2626';
+            el.innerHTML = `<span class="font-bold">${lang.toUpperCase()}</span> <span style="color:${color}">${s.percent}%</span> (${s.count}/${s.total})`;
+            bar.appendChild(el);
         });
     });
 
-// Add key form
-document.getElementById('addKeyForm')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const fd = new FormData(e.target);
-    const body = Object.fromEntries(fd);
-    const res = await fj(BASE, { method: 'POST', body: JSON.stringify(body), headers: { 'Content-Type': 'application/json' } });
-    if (res.success) { showToast('Key added'); setTimeout(() => location.reload(), 800); }
-    else showToast(res.error || 'Error', false);
-});
+    // Add key form
+    document.getElementById('addKeyForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const fd = new FormData(e.target);
+        const body = Object.fromEntries(fd);
+        const res = await fj(BASE, { method: 'POST', body: JSON.stringify(body), headers: { 'Content-Type': 'application/json' } });
+        if (res.success) { showToast('Key added'); setTimeout(() => location.reload(), 800); }
+        else showToast(res.error || 'Error', false);
+    });
+})();
 </script>
-@endpush
 @endsection

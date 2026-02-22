@@ -1,0 +1,94 @@
+{
+  "description": "Glosario de términos específicos del paquete laravel-translations.",
+  "last_updated": "2026-02-22",
+
+  "package_terms": {
+    "t()": {
+      "definition": "Función helper global para obtener traducciones. Sintaxis: t('group.key', 'fallback')",
+      "location": "src/helpers.php",
+      "example": "{{ t('nav.home', 'Home') }} → retorna traducción o 'Home'"
+    },
+    "t_raw()": {
+      "definition": "Función helper que retorna valores raw (puede decodificar JSON)",
+      "location": "src/helpers.php",
+      "example": "t_raw('config.menu_items') → puede retornar array"
+    },
+    "available_languages()": {
+      "definition": "Helper que retorna idiomas configurados con metadata (flag, name)",
+      "location": "src/helpers.php",
+      "example": "Retorna [['code'=>'es', 'flag'=>'🇪🇸', 'name'=>'Español'], ...]"
+    },
+    "Source Language": {
+      "definition": "Idioma principal de la app. Los otros idiomas se traducen DESDE este.",
+      "context": "Configurable en config o dinámicamente desde admin. Siempre es el primero en la lista.",
+      "config_key": "translations.source_language"
+    },
+    "Translation Memory": {
+      "definition": "Sistema que almacena traducciones previas (hash del texto fuente) para reutilizar sin AI",
+      "location": "src/Models/TranslationMemory.php",
+      "related": ["memory_enabled", "TranslationMemoryController"]
+    },
+    "Template Sync": {
+      "definition": "Proceso que escanea archivos Blade buscando llamadas a t() y crea registros en BD",
+      "location": "src/TranslationManager.php::syncTexts()",
+      "related": ["scan_paths", "custom_scanners"]
+    },
+    "Custom Scanner": {
+      "definition": "Clase que implementa TranslationScanner para extraer textos traducibles de tablas de la app host",
+      "location": "src/Contracts/TranslationScanner.php",
+      "example": "ProductScanner que extrae nombres y descripciones de productos"
+    },
+    "Inline Update": {
+      "definition": "Edición directa en la tabla del admin (contenteditable). Guarda via AJAX al perder foco.",
+      "location": "resources/views/translations.blade.php (JS saveInline)"
+    },
+    "Coverage Stats": {
+      "definition": "Porcentaje de traducciones completadas por idioma. Mostrado en la barra superior del admin.",
+      "location": "TranslationController::coverageStats()"
+    },
+    "Health Check": {
+      "definition": "Endpoint de diagnóstico que verifica tablas, config, layout, AI y función t()",
+      "location": "routes/web.php (GET /health)",
+      "notes": "No requiere auth. Retorna JSON con status ok/issues_found."
+    },
+    "Standalone Layout": {
+      "definition": "Layout propio del paquete con Tailwind CDN y nav. Usado como fallback cuando la app host no configura uno.",
+      "location": "resources/views/layouts/standalone.blade.php"
+    },
+    "Route Name Prefix": {
+      "definition": "Prefijo para nombres de ruta del paquete. Evita colisiones con rutas de la app host.",
+      "config_key": "translations.route_name_prefix",
+      "default": "translations",
+      "example": "translations.index, translations.memory.index"
+    }
+  },
+
+  "abbreviations": {
+    "TM": "Translation Memory",
+    "AI": "Artificial Intelligence (OpenAI API)",
+    "CSRF": "Cross-Site Request Forgery (token requerido para AJAX)",
+    "CDN": "Content Delivery Network (Tailwind CSS en standalone layout)",
+    "CRUD": "Create, Read, Update, Delete",
+    "TTL": "Time To Live (duración del cache)"
+  },
+
+  "config_key_glossary": {
+    "admin_layout": "Vista Blade que las vistas del paquete extienden (@extends)",
+    "content_section": "Nombre del @yield() en el layout donde se inyecta el contenido",
+    "route_name_prefix": "Prefijo para todos los route names (default: 'translations')",
+    "admin_prefix": "URL prefix para rutas admin (default: 'admin/translations')",
+    "admin_middleware": "Array de middleware para proteger rutas admin",
+    "scan_paths": "Directorios que se escanean al hacer Template Sync",
+    "custom_scanners": "Clases que implementan TranslationScanner",
+    "cache_ttl": "Segundos que duran las traducciones en cache",
+    "cache_prefix": "Prefijo de las keys de cache",
+    "memory_enabled": "Si Translation Memory está habilitado",
+    "health_check": "Si el endpoint /health está habilitado"
+  },
+
+  "status_values": {
+    "task_status": ["pending", "in_progress", "completed", "blocked", "cancelled"],
+    "project_phases": ["Genesis", "MVP", "Alpha", "Beta", "Production", "Maintenance"],
+    "priority_levels": ["critical", "high", "medium", "low"]
+  }
+}

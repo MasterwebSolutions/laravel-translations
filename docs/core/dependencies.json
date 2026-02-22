@@ -1,0 +1,111 @@
+{
+  "project_name": "laravel-translations",
+  "version": "1.0.0",
+  "last_updated": "2026-02-22",
+  "description": "Mapa de dependencias: qué usa qué. CRÍTICO para refactorización.",
+  "dependencies": {
+    "src/TranslationsServiceProvider.php": {
+      "used_by": ["Laravel Framework (auto-discovery via composer.json extra.laravel.providers)"],
+      "uses": ["config/translations.php", "routes/web.php", "Console/InstallCommand", "Console/MemorySyncCommand", "View/Components/MenuLink", "TranslationManager", "Services/AiTranslator"],
+      "risk_level": "CRITICAL",
+      "notes": "Punto de entrada del paquete. Si falla, TODO el paquete deja de funcionar."
+    },
+    "src/helpers.php": {
+      "used_by": ["Blade templates de la app host (via t(), t_raw(), available_languages())", "Cualquier código PHP de la app host"],
+      "uses": ["Models/SiteTranslation", "TranslationManager"],
+      "risk_level": "CRITICAL",
+      "notes": "Se carga via composer autoload.files MUY temprano. DEBE tener try/catch. Si falla = 500 en TODA la app host."
+    },
+    "src/TranslationManager.php": {
+      "used_by": ["helpers.php", "Controllers/*", "Console/*", "Middleware/SetLocale"],
+      "uses": ["Models/SiteTranslation", "Models/TranslationSetting", "Contracts/TranslationScanner"],
+      "risk_level": "HIGH",
+      "notes": "Lógica central. Todos los métodos son static. Cambios aquí afectan toda la cadena."
+    },
+    "src/Http/Controllers/TranslationController.php": {
+      "used_by": ["routes/web.php"],
+      "uses": ["TranslationManager", "Models/SiteTranslation", "Models/TranslationMemory", "Services/AiTranslator"],
+      "risk_level": "MEDIUM",
+      "notes": "Controller más grande del paquete (461 líneas). Maneja CRUD, idiomas, AI, stats."
+    },
+    "src/Http/Controllers/TranslationMemoryController.php": {
+      "used_by": ["routes/web.php"],
+      "uses": ["Models/SiteTranslation", "Models/TranslationMemory", "Models/TranslationSetting", "TranslationManager"],
+      "risk_level": "LOW"
+    },
+    "src/Models/SiteTranslation.php": {
+      "used_by": ["helpers.php (t(), t_raw())", "TranslationManager", "Controllers/*", "Console/MemorySyncCommand"],
+      "uses": ["Illuminate\\Cache"],
+      "risk_level": "CRITICAL",
+      "notes": "Modelo más usado. Tiene cache por idioma. getAllForLang() y clearCache() DEBEN tener try/catch."
+    },
+    "src/Models/TranslationSetting.php": {
+      "used_by": ["TranslationManager", "TranslationMemoryController", "Console/MemorySyncCommand"],
+      "uses": ["Illuminate\\Cache"],
+      "risk_level": "HIGH",
+      "notes": "Cache en memoria estática + Cache driver. loadAll() tiene try/catch. PK es string key_name."
+    },
+    "src/Models/TranslationMemory.php": {
+      "used_by": ["TranslationController (batch translate)", "TranslationMemoryController", "Console/MemorySyncCommand"],
+      "uses": [],
+      "risk_level": "LOW"
+    },
+    "src/Services/AiTranslator.php": {
+      "used_by": ["TranslationController"],
+      "uses": ["config translations.ai_*", "Illuminate\\Http"],
+      "risk_level": "LOW",
+      "notes": "Solo se usa si ai_enabled=true. Fallos no afectan funcionalidad base."
+    },
+    "src/Http/Middleware/SetLocale.php": {
+      "used_by": ["App host (registro manual en routes)"],
+      "uses": ["TranslationManager"],
+      "risk_level": "LOW",
+      "notes": "Middleware OPCIONAL. La app host decide si lo registra."
+    },
+    "config/translations.php": {
+      "used_by": ["TODOS los archivos del paquete"],
+      "uses": [],
+      "risk_level": "CRITICAL",
+      "notes": "Interface principal entre paquete y app host. Cambiar keys = breaking change."
+    },
+    "routes/web.php": {
+      "used_by": ["ServiceProvider (loadRoutesFrom)"],
+      "uses": ["Controllers/*", "config translations.admin_prefix/middleware/route_name_prefix"],
+      "risk_level": "HIGH",
+      "notes": "Nombres de ruta son dinámicos via config. Health check excluye auth middleware."
+    },
+    "resources/views/translations.blade.php": {
+      "used_by": ["TranslationController::index()"],
+      "uses": ["config translations.admin_layout", "config translations.content_section", "config translations.route_name_prefix", "JS inline con CSRF fallback"],
+      "risk_level": "MEDIUM"
+    },
+    "resources/views/translation-memory.blade.php": {
+      "used_by": ["TranslationMemoryController::index()"],
+      "uses": ["config translations.admin_layout", "config translations.content_section", "config translations.route_name_prefix"],
+      "risk_level": "MEDIUM"
+    },
+    "resources/views/layouts/standalone.blade.php": {
+      "used_by": ["Vistas (como layout por defecto)"],
+      "uses": ["TailwindCSS CDN", "config translations.route_name_prefix"],
+      "risk_level": "LOW",
+      "notes": "Layout fallback. Incluye su propio nav, CSRF meta, y Tailwind CDN."
+    }
+  },
+  "critical_paths": {
+    "translation_retrieval": ["App host Blade → t() → SiteTranslation::getValue() → getAllForLang() → Cache/DB"],
+    "admin_page_load": ["Browser → routes/web.php → TranslationController::index() → View → JS inline"],
+    "ai_translation": ["Admin UI → TranslationController::aiTranslateKey() → AiTranslator::translate() → OpenAI API → SiteTranslation::updateOrCreate()"],
+    "package_boot": ["composer autoload → helpers.php loaded → ServiceProvider::register() → config merged → ServiceProvider::boot() → routes+views+migrations loaded"],
+    "template_sync": ["Admin UI → TranslationController::syncTexts() → TranslationManager::syncTexts() → scanTemplateTCalls() → SiteTranslation::create()"]
+  },
+  "config_keys_contract": {
+    "description": "Estas keys de config son la API pública del paquete. Cambiarlas es BREAKING CHANGE.",
+    "keys": [
+      "source_language", "available_languages", "admin_prefix", "admin_middleware",
+      "admin_layout", "content_section", "route_name_prefix", "locale_prefix",
+      "locale_cookie", "cache_ttl", "cache_prefix", "ai_enabled", "ai_api_key",
+      "ai_api_url", "ai_model", "ai_max_tokens", "memory_enabled", "memory_auto_sync",
+      "scan_paths", "custom_scanners", "language_meta", "health_check"
+    ]
+  }
+}

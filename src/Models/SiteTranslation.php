@@ -65,14 +65,18 @@ class SiteTranslation extends Model
         $prefix = config('translations.cache_prefix', 'mw_trans_');
         $ttl = config('translations.cache_ttl', 1800);
 
-        return Cache::remember($prefix . $lang, $ttl, function () use ($lang) {
-            $rows = static::where('lang', $lang)->get(['group', 'key', 'value']);
-            $result = [];
-            foreach ($rows as $row) {
-                $result[$row->group][$row->key] = $row->value;
-            }
-            return $result;
-        });
+        try {
+            return Cache::remember($prefix . $lang, $ttl, function () use ($lang) {
+                $rows = static::where('lang', $lang)->get(['group', 'key', 'value']);
+                $result = [];
+                foreach ($rows as $row) {
+                    $result[$row->group][$row->key] = $row->value;
+                }
+                return $result;
+            });
+        } catch (\Throwable $e) {
+            return [];
+        }
     }
 
     /**
@@ -82,11 +86,16 @@ class SiteTranslation extends Model
     {
         $prefix = config('translations.cache_prefix', 'mw_trans_');
 
-        // Clear cache for all languages that exist in DB
-        $langs = static::distinct()->pluck('lang')->toArray();
-        foreach ($langs as $lang) {
-            Cache::forget($prefix . $lang);
+        try {
+            // Clear cache for all languages that exist in DB
+            $langs = static::distinct()->pluck('lang')->toArray();
+            foreach ($langs as $lang) {
+                Cache::forget($prefix . $lang);
+            }
+        } catch (\Throwable $e) {
+            // Table may not exist yet
         }
+
         // Also clear common fallback codes
         foreach (['es', 'en', 'pt', 'de', 'fr', 'it', 'ja', 'zh'] as $lang) {
             Cache::forget($prefix . $lang);

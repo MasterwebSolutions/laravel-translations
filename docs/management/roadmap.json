@@ -1,0 +1,184 @@
+{
+  "project_name": "laravel-translations",
+  "status": "ACTIVE",
+  "last_updated": "2026-02-22",
+  "phases": {
+    "Phase_1_Core": {
+      "goal": "Paquete funcional con traducciones, admin UI y AI",
+      "status": "completed"
+    },
+    "Phase_2_Integration": {
+      "goal": "Integración robusta: layout fallback, health check, install command, menu component",
+      "status": "completed"
+    },
+    "Phase_3_Quality": {
+      "goal": "Tests, export/import, paginación, documentación completa",
+      "status": "active"
+    },
+    "Phase_4_Production": {
+      "goal": "Release estable, publicar en Packagist, soporte multi-DB",
+      "status": "planned"
+    }
+  },
+  "tasks": [
+    {
+      "id": "T-001",
+      "title": "Core: traducciones en BD con helper t()",
+      "status": "completed",
+      "priority": "critical",
+      "phase": "Phase_1_Core",
+      "completed_date": "2026-02-01"
+    },
+    {
+      "id": "T-002",
+      "title": "Admin UI con inline editing y filtros",
+      "status": "completed",
+      "priority": "critical",
+      "phase": "Phase_1_Core",
+      "completed_date": "2026-02-01"
+    },
+    {
+      "id": "T-003",
+      "title": "AI Translation via OpenAI API",
+      "status": "completed",
+      "priority": "high",
+      "phase": "Phase_1_Core",
+      "completed_date": "2026-02-01"
+    },
+    {
+      "id": "T-004",
+      "title": "Translation Memory system",
+      "status": "completed",
+      "priority": "high",
+      "phase": "Phase_1_Core",
+      "completed_date": "2026-02-01"
+    },
+    {
+      "id": "T-005",
+      "title": "Fix: try/catch en helpers.php y SiteTranslation para evitar 500",
+      "status": "completed",
+      "priority": "critical",
+      "phase": "Phase_2_Integration",
+      "completed_date": "2026-02-22"
+    },
+    {
+      "id": "T-006",
+      "title": "Fix: Layout standalone como fallback",
+      "status": "completed",
+      "priority": "critical",
+      "phase": "Phase_2_Integration",
+      "completed_date": "2026-02-22"
+    },
+    {
+      "id": "T-007",
+      "title": "Fix: JS inline + CSRF fallback en vistas",
+      "status": "completed",
+      "priority": "critical",
+      "phase": "Phase_2_Integration",
+      "completed_date": "2026-02-22"
+    },
+    {
+      "id": "T-008",
+      "title": "Fix: Migración value nullable en translation_settings",
+      "status": "completed",
+      "priority": "high",
+      "phase": "Phase_2_Integration",
+      "completed_date": "2026-02-22"
+    },
+    {
+      "id": "T-009",
+      "title": "Feature: comando translations:install interactivo",
+      "status": "completed",
+      "priority": "high",
+      "phase": "Phase_2_Integration",
+      "completed_date": "2026-02-22"
+    },
+    {
+      "id": "T-010",
+      "title": "Feature: componente Blade <x-translations-menu-link />",
+      "status": "completed",
+      "priority": "high",
+      "phase": "Phase_2_Integration",
+      "completed_date": "2026-02-22"
+    },
+    {
+      "id": "T-011",
+      "title": "Feature: route name prefix configurable",
+      "status": "completed",
+      "priority": "medium",
+      "phase": "Phase_2_Integration",
+      "completed_date": "2026-02-22"
+    },
+    {
+      "id": "T-012",
+      "title": "Feature: health check endpoint /health",
+      "status": "completed",
+      "priority": "medium",
+      "phase": "Phase_2_Integration",
+      "completed_date": "2026-02-22"
+    },
+    {
+      "id": "T-013",
+      "title": "Implementar cerebro (docs/) con datos reales del proyecto",
+      "status": "completed",
+      "priority": "high",
+      "phase": "Phase_2_Integration",
+      "completed_date": "2026-02-22"
+    },
+    {
+      "id": "T-014",
+      "title": "Tests unitarios para helpers (t, t_raw, available_languages)",
+      "status": "pending",
+      "priority": "high",
+      "phase": "Phase_3_Quality",
+      "description": "Testear que t() retorna fallback cuando tabla no existe, retorna valor de BD, cachea correctamente"
+    },
+    {
+      "id": "T-015",
+      "title": "Tests feature para TranslationController endpoints",
+      "status": "pending",
+      "priority": "high",
+      "phase": "Phase_3_Quality",
+      "description": "Testear CRUD, sync, add/remove language, coverage stats"
+    },
+    {
+      "id": "T-016",
+      "title": "Tests feature para AI Translation",
+      "status": "pending",
+      "priority": "medium",
+      "phase": "Phase_3_Quality",
+      "description": "Testear con mock de OpenAI API"
+    },
+    {
+      "id": "T-017",
+      "title": "Export/Import traducciones (CSV/JSON)",
+      "status": "pending",
+      "priority": "medium",
+      "phase": "Phase_3_Quality",
+      "description": "Permitir exportar todas las traducciones y reimportarlas"
+    },
+    {
+      "id": "T-018",
+      "title": "Paginación en tabla principal de traducciones",
+      "status": "pending",
+      "priority": "low",
+      "phase": "Phase_3_Quality",
+      "description": "Cuando hay muchas keys, la tabla se vuelve lenta"
+    },
+    {
+      "id": "T-019",
+      "title": "Limpiar directorio base/ o documentar su propósito",
+      "status": "pending",
+      "priority": "low",
+      "phase": "Phase_3_Quality",
+      "description": "base/ contiene templates genéricos del cerebro que confunden. Decidir si eliminar o mover."
+    },
+    {
+      "id": "T-020",
+      "title": "Publicar en Packagist",
+      "status": "pending",
+      "priority": "high",
+      "phase": "Phase_4_Production"
+    }
+  ]
+}
