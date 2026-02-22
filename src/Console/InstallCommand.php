@@ -67,7 +67,7 @@ class InstallCommand extends Command
 
         // Step 4: Layout configuration
         $layout = $this->option('layout');
-        if (!$layout) {
+        if (!$layout && $this->input->isInteractive()) {
             $this->info('');
             $this->info('  The admin panel needs a Blade layout to render inside.');
             $this->info('  Common options: layouts.app, layouts.admin, adminlte::page');

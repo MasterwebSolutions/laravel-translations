@@ -135,7 +135,7 @@ class TranslationMemoryController extends Controller
         return response()->json([
             'auto_sync_enabled' => TranslationSetting::get('memory_auto_sync', '0') === '1',
             'sync_interval_hours' => (int) (TranslationSetting::get('memory_sync_interval', '') ?: config('translations.memory_sync_interval_hours', 24)),
-            'last_sync' => TranslationSetting::get('memory_last_sync', null),
+            'last_sync' => TranslationSetting::get('memory_last_sync', '') ?: null,
         ]);
     }
 
